@@ -6,7 +6,6 @@
 
 -module(eep0018).
 
--export([start_driver/1]).
 -export([json_to_term/1, term_to_json/1]).
 
 % Public API
@@ -29,23 +28,17 @@ json_to_term(Json) when is_binary(Json) ->
 
 % Implementation
 
-start_driver(LibDir) ->
-    case erl_ddll:load_driver(LibDir, "eep0018_drv") of
-    ok ->
-        ok;
-    {error, already_loaded} ->
-        ok;
-        %ok = erl_ddll:reload_driver(LibDir, "eep0018_drv");
-    {error, Error} ->
-        exit(erl_ddll:format_error(Error))
-    end.
+init() ->
+    case erl_ddll:load_driver(code:priv_dir(eep0018), eep0018_drv) of
+        ok -> ok;
+        {error, permanent} -> ok               % Means that the driver is already active
+    end,
+    Port = open_port({spawn, eep0018_drv}, [binary]),
+    erlang:put(eep0018_drv_port, Port),
+    Port.
 
 drv_port() ->
     case get(eep0018_drv_port) of
-    undefined ->
-        Port = open_port({spawn, "eep0018_drv"}, [binary]),
-        put(eep0018_drv_port, Port),
-        Port;
-    Port ->
-        Port
+        undefined -> init();
+        Port      -> Port
     end.
