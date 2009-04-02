@@ -36,21 +36,24 @@ OBJECTS = \
 	yajl_gen.o \
 	yajl_parser.o
 
-DRIVER = eep0018_drv.so
-BEAM = eep0018.beam
+EBIN_DIR=../ebin
+PRIV_DIR=../priv
+
+DRIVER = $(PRIV_DIR)/eep0018_drv.so
+BEAM = $(EBIN_DIR)/eep0018.beam
 
 # -- rules --------------------------------------------------------------------
 
 all: $(DRIVER) $(BEAM)
 
 clean: 
-	rm -f *.o *.beam $(DRIVER)
+	rm -f *.o $(BEAM) $(DRIVER)
 
 $(DRIVER): $(OBJECTS)
 	gcc -o $@ $^ $(LDFLAGS)
 
 $(BEAM): eep0018.erl
-	erlc $^
+	erlc -o $(EBIN_DIR) $^
 
 check:
 	@true
