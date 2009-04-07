@@ -53,7 +53,7 @@ $(DRIVER): $(OBJECTS)
 	gcc -o $@ $^ $(LDFLAGS)
 
 $(BEAM): eep0018.erl
-	erlc -o $(EBIN_DIR) $^
+	erlc +debug_info -o $(EBIN_DIR) $^
 
 check:
 	@true
