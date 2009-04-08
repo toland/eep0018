@@ -151,6 +151,18 @@ yajl_gen_integer(yajl_gen g, long int number)
 }
 
 yajl_gen_status
+yajl_gen_long(yajl_gen g, long long number)
+{
+    char i[32];
+    ENSURE_VALID_STATE; ENSURE_NOT_KEY; INSERT_SEP; INSERT_WHITESPACE;
+    sprintf(i, "%lld", number);
+    ei_bin_buf_append(g->buf, i, strlen(i));
+    APPENDED_ATOM;
+    FINAL_NEWLINE;
+    return yajl_gen_status_ok;
+}
+
+yajl_gen_status
 yajl_gen_double(yajl_gen g, double number)
 {
     ENSURE_VALID_STATE; ENSURE_NOT_KEY; INSERT_SEP; INSERT_WHITESPACE;

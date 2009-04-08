@@ -20,6 +20,8 @@
 #define STRING      107
 #define LIST        108
 #define BINARY      109
+#define SMALL_BIG   110
+#define LARGE_BIG   111
 #define VERSION     131
 
 int value_to_json(char* buf, int* index, yajl_gen handle);
@@ -170,9 +172,10 @@ value_to_json(char* buf, int* index, yajl_gen handle)
     int type, size;
     long lval;
     double dval;
+    long long llval;
     
     if(ei_get_type(buf, index, &type, &size)) return ERROR;
-    //fprintf(stderr, "Type: %d Size: %d\r\n", type, size);
+    //fprintf(stderr, "Type: %c Size: %d\r\n", (char) type, size);
     
     switch(type)
     {
@@ -183,6 +186,11 @@ value_to_json(char* buf, int* index, yajl_gen handle)
         case NEG_LONG:
             if(ei_decode_long(buf, index, &lval)) return ERROR;
             if(yajl_gen_integer(handle, lval)) return ERROR;
+            return OK;
+        case SMALL_BIG:
+        case LARGE_BIG:
+            if(ei_decode_longlong(buf, index, &llval)) return ERROR;
+            if(yajl_gen_long(handle, llval)) return ERROR;
             return OK;
         case DOUBLE:
             if(ei_decode_double(buf, index, &dval)) return ERROR;

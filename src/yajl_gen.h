@@ -81,6 +81,7 @@ extern "C" {
     void YAJL_API yajl_gen_free(yajl_gen handle);
 
     yajl_gen_status YAJL_API yajl_gen_integer(yajl_gen hand, long int number);
+    yajl_gen_status YAJL_API yajl_gen_long(yajl_gen hand, long long number);
     yajl_gen_status YAJL_API yajl_gen_double(yajl_gen hand, double number);
     yajl_gen_status YAJL_API yajl_gen_number(yajl_gen hand,
                                              const char * num,
