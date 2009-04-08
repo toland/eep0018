@@ -163,45 +163,53 @@ static yajl_callbacks erl_json_callbacks = {
 int
 json_to_term(ErlDrvPort port, char* buf, int len, char** rbuf, int rlen)
 {
-    int resp;
-    unsigned char* msg;
     State st;
     st.buf = term_buf_init();
     st.depth = 0;
     st.state[st.depth] = 0;
 
+    *rbuf = NULL;
+
     if(st.buf == NULL)
     {
-        fprintf(stderr, "FAILED TO ALLOCATE TB\r\n");
-        return -1;
+        ErlDrvTermData response[] = { ERL_DRV_ATOM, driver_mk_atom("error"),
+                                      ERL_DRV_ATOM, driver_mk_atom("allocation_error"),
+                                      ERL_DRV_TUPLE, 2 };
+
+        driver_send_term(port, driver_caller(port), response, sizeof(response) / sizeof(response[0]));
+
+        return 0;
     }
-    
+
     yajl_parser_config conf = {ALLOW_COMMENTS, CHECK_UTF8};
     yajl_handle handle = yajl_alloc(&erl_json_callbacks, &conf, &st);
     yajl_status stat = yajl_parse(handle, (unsigned char*) buf, len);
 
     if(stat != yajl_status_ok)
     {
+        unsigned char* msg;
         //msg = yajl_get_error(handle, 1, buf, len);
         msg = yajl_get_error(handle, 0, NULL, 0);
-        fprintf(stderr, "ERROR: %s\r\n", msg);
+
+        ErlDrvTermData response[] = { ERL_DRV_ATOM, driver_mk_atom("error"),
+                                      ERL_DRV_ATOM, driver_mk_atom("parse_error"),
+                                      ERL_DRV_BUF2BINARY, (ErlDrvTermData) msg, strlen((char*) msg),
+                                      ERL_DRV_TUPLE, 2,
+                                      ERL_DRV_TUPLE, 2 };
+
+        driver_send_term(port, driver_caller(port), response, sizeof(response) / sizeof(response[0]));
+
         yajl_free_error(msg);
         yajl_free(handle);
         term_buf_destroy(st.buf);
-        return -1;
+
+        return 0;
     }
 
-    *rbuf = NULL;
-    resp = driver_send_term(port, driver_caller(port), st.buf->terms, st.buf->used);
+    driver_send_term(port, driver_caller(port), st.buf->terms, st.buf->used);
+
     yajl_free(handle);
     term_buf_destroy(st.buf);
 
-    if(resp == 1)
-    {
-        return 0;
-    }
-    else
-    {
-        return -1;
-    }
+    return 0;
 }

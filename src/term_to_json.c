@@ -216,20 +216,30 @@ term_to_json(char* buf, int len, char** rbuf, int rlen)
     int index = 0;
     yajl_gen_config conf = {0, NULL};
     yajl_gen handle = yajl_gen_alloc(&conf);
+    char* error_msg = "error";
     
     if(ei_decode_version(buf, &index, &version))
     {
-        return -1;
+        int sz = strlen(error_msg);
+        ErlDrvBinary* bin = driver_alloc_binary(sz);
+        strncpy(bin->orig_bytes, error_msg, sz);
+        *rbuf = (char*) bin;
+        index = bin->orig_size;
     }
     else if(value_to_json(buf, &index, handle))
     {
-        return -1;
+        int sz = strlen(error_msg);
+        ErlDrvBinary* bin = driver_alloc_binary(sz);
+        strncpy(bin->orig_bytes, error_msg, sz);
+        *rbuf = (char*) bin;
+        index = bin->orig_size;
     }
     else
     {
         *rbuf = (char*) yajl_gen_get_buf(handle);
         index = yajl_gen_get_buf(handle)->orig_size;
         yajl_gen_free(handle);
-        return index;
     }
+
+    return index;
 }
