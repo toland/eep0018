@@ -10,7 +10,7 @@
 -define(PROCS, 5).
 
 main() ->
-    eep0018:start_driver("."),
+    io:format("Using appdir: ~s\n", [code:lib_dir(eep0018)]),
     Cases = read_cases(),
     run("eep0018", Cases, fun eep0018:term_to_json/1, fun eep0018:json_to_term/1),
     run("mochijson2", Cases, fun mochijson2:encode/1, fun mochijson2:decode/1),

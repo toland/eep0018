@@ -19,12 +19,8 @@ BEAM = \
 all: $(BEAM)
 
 clean: 
-	rm -f *.so *.beam
+	rm -f *.beam
 
-copy:
-	cp ../src/*.so ./
-	cp ../src/*.beam ./
-
-check: copy $(BEAM)
-	erl -noshell -s runner main
+check: all
+	@erl -noshell -s runner main -env ERL_LIBS $(shell (cd .. && pwd))
 
