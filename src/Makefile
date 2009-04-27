@@ -4,19 +4,14 @@
 # This file is part of EEP0018, which is released under the MIT
 # license.
 
-# Point me to the erlang installation directory.
+# Get the erlang version, root directory, etc.
+ERTS_VSN=$(shell erl -noshell -eval "io:format(\"~s\n\", [erlang:system_info(version)]), halt(0).")
+ROOT_DIR=$(shell erl -noshell -eval "io:format(\"~s\n\", [code:root_dir()]), halt(0).")
+ERTS_DIR=$(ROOT_DIR)/erts-$(ERTS_VSN)
+EI_DIR=$(shell erl -noshell -eval "io:format(\"~s\n\", [code:lib_dir(erl_interface)]), halt(0).")
 
-OTPROOT=/usr/local/lib/erlang
-
-# Hopefully the rest works for everyone.
-
-EIROOT=$(OTPROOT)/lib/$(shell ls $(OTPROOT)/lib/ | grep erl_interface)
-ERTSROOT=$(OTPROOT)/$(shell ls $(OTPROOT) | grep erts)
-
-INCLUDES = -I$(OTPROOT)/usr/include/
-INCLUDES += -I$(EIROOT)/include
-
-LIBS = -L$(EIROOT)/lib -lerl_interface -lei
+INCLUDES = -I$(ERTS_DIR)/include -I$(EI_DIR)/include
+LIBS = -L$(EI_DIR)/lib -lerl_interface -lei
 
 include Makefile.$(shell uname -s)
 
