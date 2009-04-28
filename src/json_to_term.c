@@ -19,9 +19,9 @@
 
 typedef struct
 {
-    term_buf*   buf;
-    int         state[MAX_DEPTH];
-    int         depth;
+    term_buf* buf;
+    int       state[MAX_DEPTH];
+    int       depth;
 } State;
 
 static State*
@@ -161,37 +161,43 @@ static yajl_callbacks erl_json_callbacks = {
 #define CHECK_UTF8 0
 
 int
-json_to_term(ErlDrvPort port, char* buf, int len, char** rbuf, int rlen)
+json_to_term(ErlDrvPort port, char* buf, int len)
 {
+    term_buf tbuf;
     State st;
-    st.buf = term_buf_init();
     st.depth = 0;
     st.state[st.depth] = 0;
+    st.buf = &tbuf;
 
-    *rbuf = NULL;
-
-    if(st.buf == NULL)
+    // Attempt to allocate the term buffer; if it fails we kill this port instance. 
+    if (term_buf_init(&tbuf) == -1)
     {
-        ErlDrvTermData response[] = { ERL_DRV_ATOM, driver_mk_atom("error"),
-                                      ERL_DRV_ATOM, driver_mk_atom("allocation_error"),
-                                      ERL_DRV_TUPLE, 2 };
-
-        driver_send_term(port, driver_caller(port), response, sizeof(response) / sizeof(response[0]));
-
+        driver_failure_atom(port, "Allocation error");
         return 0;
     }
 
+    // Go ahead and push the beginning of the response into the term buffer. If the parse
+    // fails we won't be using this for our message, so it's safe to do.
+    term_buf_add2(&tbuf, ERL_DRV_ATOM, driver_mk_atom("json_ok"));
+
+    // Setup to parse and then execute the parse
     yajl_parser_config conf = {ALLOW_COMMENTS, CHECK_UTF8};
     yajl_handle handle = yajl_alloc(&erl_json_callbacks, &conf, &st);
-    yajl_status stat = yajl_parse(handle, (unsigned char*) buf, len);
 
-    if(stat != yajl_status_ok)
+    if (yajl_parse(handle, (unsigned char*) buf, len) == yajl_status_ok)
     {
+        // Parse was successful, wrap up the tuple we started with and send it on
+        term_buf_tuple(st.buf, 2);
+        driver_send_term(port, driver_caller(port), st.buf->terms, st.buf->terms_used);
+    }
+    else
+    {
+        // Parse failed -- send message back to caller with whatever the parser can tell
+        // us for context.
         unsigned char* msg;
-        //msg = yajl_get_error(handle, 1, buf, len);
         msg = yajl_get_error(handle, 0, NULL, 0);
 
-        ErlDrvTermData response[] = { ERL_DRV_ATOM, driver_mk_atom("error"),
+        ErlDrvTermData response[] = { ERL_DRV_ATOM, driver_mk_atom("json_error"),
                                       ERL_DRV_ATOM, driver_mk_atom("parse_error"),
                                       ERL_DRV_BUF2BINARY, (ErlDrvTermData) msg, strlen((char*) msg),
                                       ERL_DRV_TUPLE, 2,
@@ -200,16 +206,10 @@ json_to_term(ErlDrvPort port, char* buf, int len, char** rbuf, int rlen)
         driver_send_term(port, driver_caller(port), response, sizeof(response) / sizeof(response[0]));
 
         yajl_free_error(msg);
-        yajl_free(handle);
-        term_buf_destroy(st.buf);
-
-        return 0;
     }
 
-    driver_send_term(port, driver_caller(port), st.buf->terms, st.buf->used);
-
+    // Regardless of what happens, clean up everything
     yajl_free(handle);
-    term_buf_destroy(st.buf);
-
+    term_buf_destroy(&tbuf);
     return 0;
 }
