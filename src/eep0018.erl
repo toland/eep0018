@@ -27,10 +27,10 @@ json_to_term(Json) when is_binary(Json) ->
     % parsing correctly.
     [] = erlang:port_control(drv_port(), 1, <<Json/binary, 0:8>>),
     receive
-        {error, Reason} ->
-            throw({json_error, Reason});
-        Term ->
-            Term
+        {json_ok, Term} ->
+            Term;
+        {json_error, Reason} ->
+            throw({json_error, Reason})
     end.
 
 % Implementation
