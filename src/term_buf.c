@@ -8,6 +8,8 @@
 #include "eep0018.h"
 #include "term_buf.h"
 
+#include <assert.h>
+
 #define DOUBLE_SLAB_SIZE (4096 - sizeof(double_slab))
 #define DOUBLES_PER_SLAB ((int)(sizeof(double) / DOUBLE_SLAB_SIZE))
 
@@ -40,7 +42,11 @@ term_buf_grow(term_buf* buf, int elements)
 {
     if (buf->terms_len - buf->terms_used < elements)
     {
+        // Growing the terms_len by 2 should always be enough for our purposes since
+        // the initial allocation size is 16 and we only add 2-3 elements at a time. However,
+        // future changes could introduce an issue, so we add an assert.
         buf->terms_len *= 2;
+        assert(buf->terms_len - buf->terms_used >= elements);
         buf->terms = (ErlDrvTermData*) driver_realloc(buf->terms, buf->terms_len * sizeof(ErlDrvTermData));
         if (buf->terms == NULL)
         {
