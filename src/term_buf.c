@@ -8,7 +8,9 @@
 #include "eep0018.h"
 #include "term_buf.h"
 
-#define INIT_DBL_STORE_SIZE 16
+#define DOUBLE_SLAB_SIZE (4096 - sizeof(double_slab))
+#define DOUBLES_PER_SLAB ((int)(sizeof(double) / DOUBLE_SLAB_SIZE))
+
 #define INIT_TERM_BUF_SIZE  16
 
 #define GROW_BUF(BUF, N) { if (term_buf_grow(BUF, N) == NULL) return ERROR; }
@@ -17,19 +19,20 @@
 static double*
 term_buf_copy_double(term_buf* buf, double val)
 {
-    if (buf->doubles_used >= buf->doubles_len)
+    if (buf->doubles == NULL || (buf->doubles->size - buf->doubles->used == 0))
     {
-        buf->doubles_len = buf->doubles_len ? buf->doubles_len*2 : INIT_DBL_STORE_SIZE;
-        buf->doubles = (double*) driver_realloc(buf->doubles, buf->doubles_len * sizeof(double));
-        if (buf->doubles == NULL)
-        {
-            return NULL;
-        }
+        // Need to allocate a new slab
+        double_slab* slab = driver_alloc(DOUBLE_SLAB_SIZE);
+        memset(slab, '\0', DOUBLE_SLAB_SIZE);
+        slab->size = DOUBLES_PER_SLAB;
+        slab->values = (double*)(slab + sizeof(double_slab));
+        slab->next_slab = buf->doubles;
+        buf->doubles = slab;
     }
 
-    int used = buf->doubles_used;
-    buf->doubles[buf->doubles_used++] = val;
-    return buf->doubles + used;
+    int used = buf->doubles->used;
+    buf->doubles->values[buf->doubles->used++] = val;
+    return buf->doubles->values + used;
 }
 
 
@@ -71,17 +74,21 @@ term_buf_init(term_buf* buf)
         return -1;
     }
 
-    // Note that we don't need to initialize the buffer to hold doubles
-    // as a.) we may not need it and b.) realloc will do the Right Thing (tm)
-    // if you pass NULL in as the initial pointer.
     return 0;
 }
 
 void
 term_buf_destroy(term_buf* buf)
 {
+    // Walk list of double_slab and free each one
+    double_slab* d = buf->doubles;
+    while (d != NULL)
+    {
+        double_slab* dnext = d->next_slab;
+        driver_free(d);
+        d = dnext;
+    }
     driver_free(buf->terms);
-    driver_free(buf->doubles);
 }
 
 
