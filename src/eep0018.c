@@ -29,7 +29,8 @@ eep0018_control(
         case 0:
             return term_to_json(buf, len, rbuf, rlen);
         case 1:
-            return json_to_term((ErlDrvPort) drv_data, buf, len, rbuf, rlen);
+            *rbuf = 0;
+            return json_to_term((ErlDrvPort) drv_data, buf, len);
         default:
             return -1;
     }
