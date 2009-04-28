@@ -12,12 +12,18 @@
 
 typedef struct
 {
+    int      used;
+    int      size;
+    void*    next_slab;
+    double*  values;
+} double_slab;
+
+typedef struct
+{
     ErlDrvTermData* terms;
     int             terms_len;
     int             terms_used;
-    double*         doubles;
-    int             doubles_used;
-    int             doubles_len;
+    double_slab*    doubles;
     ErlDrvTermData  true_atom;
     ErlDrvTermData  false_atom;
     ErlDrvTermData  null_atom;
