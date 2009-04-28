@@ -12,32 +12,34 @@
 
 typedef struct
 {
-    double*         data;
-    int             used;
-    int             length;
-} dbl_store;
-
-typedef struct
-{
     ErlDrvTermData* terms;
-    int             length;
-    int             used;
-    dbl_store*      store;
+    int             terms_len;
+    int             terms_used;
+    double*         doubles;
+    int             doubles_used;
+    int             doubles_len;
+    ErlDrvTermData  true_atom;
+    ErlDrvTermData  false_atom;
+    ErlDrvTermData  null_atom;
 } term_buf;
 
-term_buf* term_buf_init(void);
+int  term_buf_init(term_buf* buf);
 void term_buf_destroy(term_buf* buf);
 
-int term_buf_tuple(term_buf* buf, unsigned int elements);
-int term_buf_list(term_buf* buf, unsigned int elements);
-int term_buf_binary(term_buf* buf, const void* data, unsigned int length);
+int term_buf_add2(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2);
+int term_buf_add3(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2, ErlDrvTermData d3);
 
-// These can be better optimized to store the atom value and reuse the value.
-int term_buf_true(term_buf* buf);
-int term_buf_false(term_buf* buf);
-int term_buf_null(term_buf* buf);
+#define term_buf_tuple(buf, elements) term_buf_add2(buf, ERL_DRV_TUPLE, elements)
+#define term_buf_list(buf, elements)  term_buf_add3(buf, ERL_DRV_NIL, ERL_DRV_LIST, elements+1)
 
-int term_buf_int(term_buf* buf, int value);
+#define term_buf_binary(buf, data, len) term_buf_add3(buf, ERL_DRV_BUF2BINARY, (ErlDrvTermData)data, len)
+
+#define term_buf_true(buf)  term_buf_add2(buf, ERL_DRV_ATOM, buf->true_atom)
+#define term_buf_false(buf) term_buf_add2(buf, ERL_DRV_ATOM, buf->false_atom)
+#define term_buf_null(buf)  term_buf_add2(buf, ERL_DRV_ATOM, buf->null_atom)
+
+#define term_buf_int(buf, value) term_buf_add2(buf, ERL_DRV_INT, (ErlDrvSInt)value)
+
 int term_buf_double(term_buf* buf, double value);
 
 #endif

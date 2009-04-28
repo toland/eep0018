@@ -9,212 +9,113 @@
 #include "term_buf.h"
 
 #define INIT_DBL_STORE_SIZE 16
-#define INIT_TERM_BUF_SIZE 2048
+#define INIT_TERM_BUF_SIZE  16
 
-#define CHECK_REQUIRE(BUF, N) if(term_buf_require(BUF, N)) return ERROR;
+#define GROW_BUF(BUF, N) { if (term_buf_grow(BUF, N) == NULL) return ERROR; }
 
-dbl_store*
-dbl_store_init()
+// Internal function to make a copy of a double for passing into driver_send_term
+static double*
+term_buf_copy_double(term_buf* buf, double val)
 {
-    dbl_store* ret = (dbl_store*) malloc(sizeof(dbl_store));
-    if(ret == NULL)
+    if (buf->doubles_used >= buf->doubles_len)
     {
-        return NULL;
-    }
-    
-    ret->data = (double*) malloc(INIT_DBL_STORE_SIZE * sizeof(double));
-    if(ret->data == NULL)
-    {
-        free(ret);
-        return NULL;
-    }
-    
-    ret->length = INIT_DBL_STORE_SIZE;
-    ret->used = 0;
-    return ret;
-}
-
-void
-dbl_store_destroy(dbl_store* store)
-{
-    free(store->data);
-    free(store);
-}
-
-double*
-dbl_store_add(dbl_store* store, double val)
-{
-    double* next;
-    if(store->used >= store->length)
-    {
-        store->length *= 2;
-        next = (double*) realloc(store->data, store->length * sizeof(double));
-        if(next == NULL)
+        buf->doubles_len = buf->doubles_len ? buf->doubles_len*2 : INIT_DBL_STORE_SIZE;
+        buf->doubles = (double*) driver_realloc(buf->doubles, buf->doubles_len * sizeof(double));
+        if (buf->doubles == NULL)
         {
             return NULL;
         }
     }
-    
-    store->data[store->used++] = val;
-    return store->data + (store->used-1);
+
+    int used = buf->doubles_used;
+    buf->doubles[buf->doubles_used++] = val;
+    return buf->doubles + used;
 }
 
-term_buf*
-term_buf_init(void)
+
+// Internal function to grow array of terms 
+static ErlDrvTermData*
+term_buf_grow(term_buf* buf, int elements)
 {
-    term_buf* ret = (term_buf*) malloc(sizeof(term_buf));
-    if(ret == NULL)
+    if (buf->terms_len - buf->terms_used < elements)
     {
-        //fprintf(stderr, "STRUCT FAIL\r\n");
-        return NULL;
-    }
-    
-    ret->terms = (ErlDrvTermData*) malloc(INIT_TERM_BUF_SIZE * sizeof(ErlDrvTermData));
-    if(ret->terms == NULL)
-    {
-        //fprintf(stderr, "TERMS FAIL\r\n");
-        free(ret);
-        return NULL;
-    }
-    
-    ret->store = dbl_store_init();
-    if(ret->store == NULL)
-    {
-        //fprintf(stderr, "STORE FAIL\r\n");
-        free(ret->terms);
-        free(ret);
-        return NULL;
+        buf->terms_len *= 2;
+        buf->terms = (ErlDrvTermData*) driver_realloc(buf->terms, buf->terms_len * sizeof(ErlDrvTermData));
+        if (buf->terms == NULL)
+        {
+            return NULL;
+        }
     }
 
-    ret->length = INIT_TERM_BUF_SIZE;
-    ret->used = 0;
-    return ret;
+    return buf->terms;
+}
+
+
+int
+term_buf_init(term_buf* buf)
+{
+    memset(buf, '\0', sizeof(term_buf));
+
+    // Initialize atom values that we re-use heavily
+    buf->true_atom  = driver_mk_atom("true");
+    buf->false_atom = driver_mk_atom("false");
+    buf->null_atom  = driver_mk_atom("null");
+
+    // Allocate array to hold erlang message we will construct. We do this
+    // for efficiency reasons -- there will be at least one term in every 
+    // message.
+    buf->terms_len = INIT_TERM_BUF_SIZE;
+    buf->terms = (ErlDrvTermData*) driver_alloc(buf->terms_len * sizeof(ErlDrvTermData));
+    if(buf->terms == NULL)
+    {
+        return -1;
+    }
+
+    // Note that we don't need to initialize the buffer to hold doubles
+    // as a.) we may not need it and b.) realloc will do the Right Thing (tm)
+    // if you pass NULL in as the initial pointer.
+    return 0;
 }
 
 void
 term_buf_destroy(term_buf* buf)
 {
-    dbl_store_destroy(buf->store);
-    free(buf->terms);
-    free(buf);
+    driver_free(buf->terms);
+    driver_free(buf->doubles);
 }
 
-int
-term_buf_require(term_buf* buf, int want)
-{
-    //fprintf(stderr, "REQ: %p\r\n", buf);
-    ErlDrvTermData* next;
-
-    if(buf->length - buf->used > want)
-    {
-        //fprintf(stderr, "ROOM IS GOOD\r\n");
-        return OK;
-    }
-
-    //fprintf(stderr, "NEED ROOM\r\n");
-    
-    buf->length *= 2;
-    next = (ErlDrvTermData*) realloc(buf->terms, buf->length * sizeof(ErlDrvTermData));
-
-    if(next == NULL)
-    {
-        //fprintf(stderr, "TB NEXT IS NULL");
-        return ERROR;
-    }
-    else
-    {
-        //fprintf(stderr, "TB REQ OK\r\n");
-        buf->terms = next;
-        return OK;
-    }
-}
 
 int
-term_buf_tuple(term_buf* buf, unsigned int elements)
+term_buf_add2(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2)
 {
-    //fprintf(stderr, "TB TUPLE: %u\r\n", elements);
-    CHECK_REQUIRE(buf, 2);
-    buf->terms[buf->used++] = ERL_DRV_TUPLE;
-    buf->terms[buf->used++] = elements;
+    GROW_BUF(buf, 2);
+    buf->terms[buf->terms_used++] = d1;
+    buf->terms[buf->terms_used++] = d2;
     return OK;
 }
 
 int
-term_buf_list(term_buf* buf, unsigned int elements)
+term_buf_add3(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2, ErlDrvTermData d3)
 {
-    //fprintf(stderr, "TB LIST: %u\r\n", elements);
-    CHECK_REQUIRE(buf, 3);
-    buf->terms[buf->used++] = ERL_DRV_NIL;
-    buf->terms[buf->used++] = ERL_DRV_LIST;
-    buf->terms[buf->used++] = elements+1;
-    return OK;
-}
-
-int
-term_buf_binary(term_buf* buf, const void* data, unsigned int length)
-{
-    //fprintf(stderr, "TB BINARY: %u\r\n", length);
-    CHECK_REQUIRE(buf, 3);
-    buf->terms[buf->used++] = ERL_DRV_BUF2BINARY;
-    buf->terms[buf->used++] = (ErlDrvTermData) data;
-    buf->terms[buf->used++] = length;
-    return OK;
-}
-
-int
-term_buf_true(term_buf* buf)
-{
-    //fprintf(stderr, "TB TRUE\r\n");
-    CHECK_REQUIRE(buf, 2);
-    buf->terms[buf->used++] = ERL_DRV_ATOM;
-    buf->terms[buf->used++] = driver_mk_atom("true");
-    return OK;
-}
-
-int
-term_buf_false(term_buf* buf)
-{
-    //fprintf(stderr, "TB FALSE\r\n");
-    CHECK_REQUIRE(buf, 2);
-    buf->terms[buf->used++] = ERL_DRV_ATOM;
-    buf->terms[buf->used++] = driver_mk_atom("false");
-    return OK;
-}
-
-int
-term_buf_null(term_buf* buf)
-{
-    //fprintf(stderr, "TB NULL\r\n");
-    CHECK_REQUIRE(buf, 2);
-    buf->terms[buf->used++] = ERL_DRV_ATOM;
-    buf->terms[buf->used++] = driver_mk_atom("null");
-    return OK;
-}
-
-int
-term_buf_int(term_buf* buf, int value)
-{
-    //fprintf(stderr, "TB INT\r\n");
-    CHECK_REQUIRE(buf, 2);
-    buf->terms[buf->used++] = ERL_DRV_INT;
-    buf->terms[buf->used++] = (ErlDrvSInt) value;
+    GROW_BUF(buf, 3);
+    buf->terms[buf->terms_used++] = d1;
+    buf->terms[buf->terms_used++] = d2;
+    buf->terms[buf->terms_used++] = d3;
     return OK;
 }
 
 int
 term_buf_double(term_buf* buf, double value)
 {
-    //fprintf(stderr, "TB DOUBLE\r\n");
-    CHECK_REQUIRE(buf, 2);
+    GROW_BUF(buf, 2);
 
-    double* pos = dbl_store_add(buf->store, value);
-    if(pos == NULL)
+    double* ptr = term_buf_copy_double(buf, value);
+    if (ptr == NULL)
     {
         return ERROR;
     }
     
-    buf->terms[buf->used++] = ERL_DRV_FLOAT;
-    buf->terms[buf->used++] = (ErlDrvTermData) pos;
-
+    buf->terms[buf->terms_used++] = ERL_DRV_FLOAT;
+    buf->terms[buf->terms_used++] = (ErlDrvTermData)ptr;
     return OK;
 }
