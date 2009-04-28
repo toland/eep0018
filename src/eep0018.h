@@ -23,6 +23,6 @@
 #define MAX_DEPTH   1024
 
 int term_to_json(char* buf, int len, char** rbuf, int rlen);
-int json_to_term(ErlDrvPort port, char* buf, int len, char** rbuf, int rlen);
+int json_to_term(ErlDrvPort port, char* buf, int len);
 
 #endif
