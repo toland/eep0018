@@ -55,8 +55,6 @@ term_buf_grow(term_buf* buf, int elements)
 int
 term_buf_init(term_buf* buf)
 {
-    memset(buf, '\0', sizeof(term_buf));
-
     // Initialize atom values that we re-use heavily
     buf->true_atom  = driver_mk_atom("true");
     buf->false_atom = driver_mk_atom("false");
@@ -65,12 +63,16 @@ term_buf_init(term_buf* buf)
     // Allocate array to hold erlang message we will construct. We do this
     // for efficiency reasons -- there will be at least one term in every 
     // message.
-    buf->terms_len = INIT_TERM_BUF_SIZE;
+    buf->terms_len  = INIT_TERM_BUF_SIZE;
+    buf->terms_used = 0;
     buf->terms = (ErlDrvTermData*) driver_alloc(buf->terms_len * sizeof(ErlDrvTermData));
     if(buf->terms == NULL)
     {
         return -1;
     }
+
+    // Make sure to clear pointer to doubles slab
+    buf->doubles = 0;
 
     return 0;
 }
