@@ -13,9 +13,8 @@
 typedef struct
 {
     int      used;
-    int      size;
     void*    next_slab;
-    double*  values;
+    double   values[];
 } double_slab;
 
 typedef struct

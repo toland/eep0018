@@ -19,15 +19,13 @@
 static double*
 term_buf_copy_double(term_buf* buf, double val)
 {
-    if (buf->doubles == NULL || (buf->doubles->size - buf->doubles->used == 0))
+    if (buf->doubles == NULL || (buf->doubles->used == DOUBLES_PER_SLAB))
     {
         // Need to allocate a new slab
         double_slab* slab = driver_alloc(DOUBLE_SLAB_SIZE);
-        memset(slab, '\0', DOUBLE_SLAB_SIZE);
-        slab->size = DOUBLES_PER_SLAB;
-        slab->values = (double*)(slab + sizeof(double_slab));
-        slab->next_slab = buf->doubles;
-        buf->doubles = slab;
+        slab->used        = 0;
+        slab->next_slab   = buf->doubles;
+        buf->doubles      = slab;
     }
 
     int used = buf->doubles->used;
