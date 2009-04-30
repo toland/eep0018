@@ -11,13 +11,8 @@
 % Public API
 
 term_to_json(Term) ->
-    Bin = term_to_binary(Term),
-    case erlang:port_control(drv_port(), 0, Bin) of
-        <<"error">> ->
-            throw({json_error, {invalid_input, Term}});
-        JSON ->
-            JSON
-    end.
+    [] = erlang:port_control(drv_port(), 0, term_to_binary(Term)),
+    term_to_json_loop(drv_port(), <<>>).
 
 json_to_term(Json) when is_list(Json) ->
     json_to_term(list_to_binary(Json));
@@ -48,4 +43,14 @@ drv_port() ->
     case get(eep0018_drv_port) of
         undefined -> init();
         Port      -> Port
+    end.
+
+term_to_json_loop(Port, Json) ->
+    receive
+        {Port, {data, Bin}} when is_binary(Bin) ->
+            term_to_json_loop(Port, <<Json/binary, Bin/binary>>);
+        term_to_json_complete ->
+            Json;
+        term_to_json_error ->
+            throw({json_error, "Conversion of Erlang term to JSON failed."})
     end.
