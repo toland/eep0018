@@ -95,6 +95,8 @@ void flush_data(gen_ctx* ctx, int refill)
 void append_data(gen_ctx* ctx, const char* str, int str_len)
 {
     DBG("append_data(%d): %s\n", str_len, str);
+    if (0 >= str_len) // Avoid copying memcpy on a zero-byte string
+        return;       // e.g. if you get \r\n through or \n"
     const char* curr = str;
     const char* str_end = str + str_len;
     while (curr != str_end)
@@ -273,7 +275,7 @@ int estring_to_json(gen_ctx* ctx, int size, char* buf, int* index)
     // As with ei_decode_binary, ei_decode_string requires a target buffer to copy the
     // string into. Again, we read the erl_interface source to find that in this situation
     // the first 3 bytes are header info, so we'll skip that.
-    const char* data = buf + (*index) + 3;
+    const unsigned char* data = buf + (*index) + 3;
 
     // Open the array
     append_data(ctx, "[", 1);
@@ -283,7 +285,7 @@ int estring_to_json(gen_ctx* ctx, int size, char* buf, int* index)
     int strbuf_used, i;
     for (i = 0; i < size; i++)
     {
-        strbuf_used = snprintf(strbuf, sizeof(strbuf), "%ld", (long int)*(data + i));
+        strbuf_used = snprintf(strbuf, sizeof(strbuf), "%u", (unsigned int) data[i]);
         append_data(ctx, strbuf, strbuf_used);
 
         // Add sep if we are not at the end
@@ -324,7 +326,7 @@ static int atom_to_json(gen_ctx* ctx, int size, char* buf, int* index)
         // Unknown atom, just treat it as a normal string
         append_string(ctx, data, size);
     }
-    
+    next_state(ctx);
     return OK;
 }
 
