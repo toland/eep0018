@@ -10,7 +10,7 @@ ROOT_DIR=$(shell erl -noshell -eval "io:format(\"~s\n\", [code:root_dir()]), hal
 ERTS_DIR=$(ROOT_DIR)/erts-$(ERTS_VSN)
 EI_DIR=$(shell erl -noshell -eval "io:format(\"~s\n\", [code:lib_dir(erl_interface)]), halt(0).")
 
-INCLUDES = -I$(ERTS_DIR)/include -I$(EI_DIR)/include
+INCLUDES = -I$(ERTS_DIR)/include -I$(EI_DIR)/include -I. -I../yajl/src/api
 LIBS = -L$(EI_DIR)/lib -lerl_interface -lei
 
 include Makefile.$(shell uname -s)
@@ -23,11 +23,13 @@ OBJECTS = \
 	json_to_term.o \
 	term_buf.o \
 	term_to_json.o \
-	yajl.o \
-	yajl_encode.o \
-	yajl_lex.o \
-	yajl_buf.o \
-	yajl_parser.o
+	../yajl/src/yajl.o \
+	../yajl/src/yajl_alloc.o \
+	../yajl/src/yajl_buf.o \
+	../yajl/src/yajl_encode.o \
+	../yajl/src/yajl_gen.o \
+	../yajl/src/yajl_lex.o \
+	../yajl/src/yajl_parser.o 
 
 EBIN_DIR=../ebin
 PRIV_DIR=../priv
@@ -37,16 +39,19 @@ BEAM = $(EBIN_DIR)/eep0018.beam
 
 # -- rules --------------------------------------------------------------------
 
-all: $(DRIVER) $(BEAM)
+all: link $(DRIVER) $(BEAM)
 
 clean: 
-	rm -f *.o $(BEAM) $(DRIVER)
+	rm -f *.o $(BEAM) $(DRIVER) yajl
 
 $(DRIVER): $(OBJECTS)
 	gcc -o $@ $^ $(LDFLAGS)
 
 $(BEAM): eep0018.erl
 	erlc +debug_info -o $(EBIN_DIR) $^
+
+link:
+	ln -sf $(shell cd ../yajl/src/api && pwd) yajl
 
 check:
 	@true

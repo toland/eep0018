@@ -182,7 +182,7 @@ json_to_term(ErlDrvPort port, char* buf, int len)
 
     // Setup to parse and then execute the parse
     yajl_parser_config conf = {ALLOW_COMMENTS, CHECK_UTF8};
-    yajl_handle handle = yajl_alloc(&erl_json_callbacks, &conf, &st);
+    yajl_handle handle = yajl_alloc(&erl_json_callbacks, &conf, NULL, &st);
 
     if (yajl_parse(handle, (unsigned char*) buf, len) == yajl_status_ok)
     {
@@ -205,7 +205,7 @@ json_to_term(ErlDrvPort port, char* buf, int len)
 
         driver_send_term(port, driver_caller(port), response, sizeof(response) / sizeof(response[0]));
 
-        yajl_free_error(msg);
+        yajl_free_error(handle, msg);
     }
 
     // Regardless of what happens, clean up everything
