@@ -20,7 +20,7 @@
 typedef struct
 {
     term_buf* buf;
-    int       state[MAX_DEPTH];
+    int       state[YAJL_MAX_DEPTH];
     int       depth;
 } State;
 
