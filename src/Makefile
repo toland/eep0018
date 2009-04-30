@@ -15,12 +15,11 @@ LIBS = -L$(EI_DIR)/lib -lerl_interface -lei
 
 include Makefile.$(shell uname -s)
 
-CFLAGS = $(GCCFLAGS) $(INCLUDES)
-LDFLAGS = $(GCCFLAGS) $(LIBS)
+CFLAGS += $(GCCFLAGS) $(INCLUDES)
+LDFLAGS += $(GCCFLAGS) $(LIBS)
 
 OBJECTS = \
 	eep0018.o \
-	ei_bin_buf.o \
 	json_to_term.o \
 	term_buf.o \
 	term_to_json.o \
@@ -28,7 +27,6 @@ OBJECTS = \
 	yajl_encode.o \
 	yajl_lex.o \
 	yajl_buf.o \
-	yajl_gen.o \
 	yajl_parser.o
 
 EBIN_DIR=../ebin
