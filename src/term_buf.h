@@ -14,15 +14,15 @@ typedef struct
 {
     int      used;
     void*    next_slab;
-    double   values[];
-} double_slab;
+    char     data[];
+} slab;
 
 typedef struct
 {
     ErlDrvTermData* terms;
     int             terms_len;
     int             terms_used;
-    double_slab*    doubles;
+    slab*           slabs;
     ErlDrvTermData  true_atom;
     ErlDrvTermData  false_atom;
     ErlDrvTermData  null_atom;
@@ -37,14 +37,13 @@ int term_buf_add3(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2, ErlDrvTer
 #define term_buf_tuple(buf, elements) term_buf_add2(buf, ERL_DRV_TUPLE, elements)
 #define term_buf_list(buf, elements)  term_buf_add3(buf, ERL_DRV_NIL, ERL_DRV_LIST, elements+1)
 
-#define term_buf_binary(buf, data, len) term_buf_add3(buf, ERL_DRV_BUF2BINARY, (ErlDrvTermData)data, len)
-
 #define term_buf_true(buf)  term_buf_add2(buf, ERL_DRV_ATOM, buf->true_atom)
 #define term_buf_false(buf) term_buf_add2(buf, ERL_DRV_ATOM, buf->false_atom)
 #define term_buf_null(buf)  term_buf_add2(buf, ERL_DRV_ATOM, buf->null_atom)
 
 #define term_buf_int(buf, value) term_buf_add2(buf, ERL_DRV_INT, (ErlDrvSInt)value)
 
+int term_buf_binary(term_buf* buf, const unsigned char* data, int len);
 int term_buf_double(term_buf* buf, double value);
 
 #endif
