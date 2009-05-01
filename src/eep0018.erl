@@ -6,9 +6,19 @@
 
 -module(eep0018).
 
+%% Public API
 -export([json_to_term/1, term_to_json/1]).
 
-% Public API
+%% Export gen_server that's used for process to ensure the
+%% driver code doesn't get unloaded. Hack? I think so.
+-behaviour(gen_server).
+-export([start_link/0,
+         init/1, handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3]).
+
+%% ====================================================================
+%% Public API
+%% ====================================================================
 
 term_to_json(Term) ->
     [] = erlang:port_control(drv_port(), 0, term_to_binary(Term)),
@@ -17,9 +27,9 @@ term_to_json(Term) ->
 json_to_term(Json) when is_list(Json) ->
     json_to_term(list_to_binary(Json));
 json_to_term(Json) when is_binary(Json) ->
-    % The null byte is important for bare literals. Without it
-    % yajl will throw a fit because it doesn't think it's finished
-    % parsing correctly.
+    %% The null byte is important for bare literals. Without it
+    %% yajl will throw a fit because it doesn't think it's finished
+    %% parsing correctly.
     [] = erlang:port_control(drv_port(), 1, <<Json/binary, 0:8>>),
     receive
         {json_ok, Term} ->
@@ -28,22 +38,33 @@ json_to_term(Json) when is_binary(Json) ->
             throw({json_error, Reason})
     end.
 
-% Implementation
 
-init() ->
-    case erl_ddll:load_driver(code:priv_dir(eep0018), eep0018_drv) of
-        ok -> ok;
-        {error, permanent} -> ok               % Means that the driver is already active
-    end,
-    Port = open_port({spawn, eep0018_drv}, [binary]),
-    erlang:put(eep0018_drv_port, Port),
-    Port.
+%% ====================================================================
+%% Internal functions
+%% ====================================================================
 
 drv_port() ->
     case get(eep0018_drv_port) of
-        undefined -> init();
-        Port      -> Port
+        undefined ->
+            ensure_started(),
+            Port = open_port({spawn, eep0018_drv}, [binary]),
+            erlang:put(eep0018_drv_port, Port),
+            Port;
+        Port ->
+            Port
     end.
+
+ensure_started() ->
+    case whereis(eep0018_server) of
+        undefined ->
+            C = {eep0018_server, {?MODULE, start_link, []}, permanent, 1000,
+                 worker, [?MODULE]},
+            supervisor:start_child(kernel_safe_sup, C),
+            ok;
+        _ ->
+            ok
+    end.
+
 
 term_to_json_loop(Port, Json) ->
     receive
@@ -54,3 +75,39 @@ term_to_json_loop(Port, Json) ->
         term_to_json_error ->
             throw({json_error, "Conversion of Erlang term to JSON failed."})
     end.
+
+
+%% ====================================================================
+%% gen_server callbacks/impl
+%% ====================================================================
+
+%% @hidden
+start_link() ->
+    gen_server:start_link({local, eep0018_server}, ?MODULE, [], []).
+
+%% @hidden
+init([]) ->
+    ok = erl_ddll:load_driver(code:priv_dir(eep0018), eep0018_drv),
+    Port = open_port({spawn, eep0018_drv}, [binary]),
+    {ok, Port}.
+
+%% @hidden
+handle_call(_Msg, _From, State) ->
+    {stop, unsupportedOperation, State}.
+
+%% @hidden
+handle_cast(_Msg, State) ->
+    {stop, unsupportedOperation, State}.
+
+%% @hidden
+handle_info(_Info, State) ->
+    {stop, unsupportedOperation, State}.    
+
+%% @hidden
+terminate(_Reason, Port) ->
+    true = port_close(Port),
+    ok.
+
+%% @hidden
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
