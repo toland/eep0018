@@ -7,24 +7,21 @@
 
 #include "eep0018.h"
 
-static ErlDrvData
-eep0018_start(ErlDrvPort port, char *buff)
+static ErlDrvData eep0018_start(ErlDrvPort port, char *buff)
 {
     set_port_control_flags(port, PORT_CONTROL_FLAG_BINARY);
     return (ErlDrvData) port;
 }
 
-static int
-eep0018_control(
-        ErlDrvData drv_data,
-        unsigned int command,
-        char* buf,
-        int len,
-        char **rbuf,
-        int rlen)
+static int eep0018_control(ErlDrvData drv_data,
+                           unsigned int command,
+                           char* buf,
+                           int len,
+                           char **rbuf,
+                           int rlen)
 {
     ErlDrvPort port = (ErlDrvPort)drv_data;
-
+    
     switch(command)
     {
         case 0:
@@ -39,8 +36,7 @@ eep0018_control(
     return 0;
 }
 
-static ErlDrvEntry
-eep0018_driver_entry =
+static ErlDrvEntry eep0018_driver_entry =
 {
     NULL,               /* Init */
     eep0018_start,

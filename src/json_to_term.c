@@ -24,8 +24,7 @@ typedef struct
     int       depth;
 } State;
 
-static State*
-prepare(void* ctx)
+static State* prepare(void* ctx)
 {
     State* st = (State*) ctx;
 
@@ -37,8 +36,7 @@ prepare(void* ctx)
     return st;
 }
 
-static int
-finish(State* st)
+static int finish(State* st)
 {
     if(st->depth > 0 && st->state[st->depth] < 0)
     {
@@ -49,16 +47,14 @@ finish(State* st)
     return YAJL_OK;
 }
 
-static int
-erl_json_null(void* ctx)
+static int erl_json_null(void* ctx)
 {
     State* st = prepare(ctx);
     CHECK_CALL(term_buf_null(st->buf));
     return finish(st);
 }
 
-static int
-erl_json_boolean(void* ctx, int boolVal)
+static int erl_json_boolean(void* ctx, int boolVal)
 {
     State* st = prepare(ctx);
     
@@ -74,32 +70,28 @@ erl_json_boolean(void* ctx, int boolVal)
     return finish(st);
 }
 
-static int
-erl_json_long(void* ctx, long val)
+static int erl_json_long(void* ctx, long val)
 {
     State* st = prepare(ctx);
     CHECK_CALL(term_buf_int(st->buf, val));
     return finish(st);
 }
 
-static int
-erl_json_double(void* ctx, double val)
+static int erl_json_double(void* ctx, double val)
 {
     State* st = prepare(ctx);
     CHECK_CALL(term_buf_double(st->buf, val));
     return finish(st);
 }
 
-static int
-erl_json_string(void* ctx, const unsigned char * stringVal, unsigned int stringLen)
+static int erl_json_string(void* ctx, const unsigned char * stringVal, unsigned int stringLen)
 {
     State* st = prepare(ctx);
     CHECK_CALL(term_buf_binary(st->buf, stringVal, stringLen));
     return finish(st);
 }
  
-static int
-erl_json_start_map(void* ctx)
+static int erl_json_start_map(void* ctx)
 {
     // {"foo": 1} -> {[{<<"foo">>, 1}]}
     State* st = prepare(ctx);
@@ -107,8 +99,7 @@ erl_json_start_map(void* ctx)
     return YAJL_OK;
 }
 
-static int
-erl_json_end_map(void* ctx)
+static int erl_json_end_map(void* ctx)
 {
     State* st = (State*) ctx;
     //Close the list of two tuples
@@ -118,8 +109,7 @@ erl_json_end_map(void* ctx)
     return finish(st);
 }
 
-static int
-erl_json_map_key(void* ctx, const unsigned char* keyVal, unsigned int keyLen)
+static int erl_json_map_key(void* ctx, const unsigned char* keyVal, unsigned int keyLen)
 {
     State* st = prepare(ctx);
     st->state[++st->depth] = -1;
@@ -127,16 +117,14 @@ erl_json_map_key(void* ctx, const unsigned char* keyVal, unsigned int keyLen)
     return YAJL_OK;
 }
 
-static int
-erl_json_start_array(void* ctx)
+static int erl_json_start_array(void* ctx)
 {
     State* st = prepare(ctx);
     st->state[++st->depth] = 0;
     return YAJL_OK;
 }
 
-static int
-erl_json_end_array(void* ctx)
+static int erl_json_end_array(void* ctx)
 {
     State* st = (State*) ctx;
     CHECK_CALL(term_buf_list(st->buf, st->state[st->depth--]));
@@ -160,8 +148,7 @@ static yajl_callbacks erl_json_callbacks = {
 #define ALLOW_COMMENTS 0
 #define CHECK_UTF8 0
 
-int
-json_to_term(ErlDrvPort port, char* buf, int len)
+int json_to_term(ErlDrvPort port, char* buf, int len)
 {
     term_buf tbuf;
     State st;

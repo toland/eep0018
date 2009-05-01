@@ -18,8 +18,7 @@
 #define GROW_BUF(BUF, N) { if (term_buf_grow(BUF, N) == NULL) return ERROR; }
 
 // Internal function to allocate a room on a slab
-static void*
-term_buf_slab_alloc(term_buf* buf, int size)
+static void* term_buf_slab_alloc(term_buf* buf, int size)
 {
     if (buf->slabs->used + size > SLAB_DATA_SIZE)
     {
@@ -44,8 +43,7 @@ term_buf_slab_alloc(term_buf* buf, int size)
 
 
 // Internal function to grow array of terms 
-static ErlDrvTermData*
-term_buf_grow(term_buf* buf, int elements)
+static ErlDrvTermData* term_buf_grow(term_buf* buf, int elements)
 {
     if (buf->terms_len - buf->terms_used < elements)
     {
@@ -65,8 +63,7 @@ term_buf_grow(term_buf* buf, int elements)
 }
 
 
-int
-term_buf_init(term_buf* buf)
+int term_buf_init(term_buf* buf)
 {
     // Initialize atom values that we re-use heavily
     buf->true_atom  = driver_mk_atom("true");
@@ -93,8 +90,7 @@ term_buf_init(term_buf* buf)
     return 0;
 }
 
-void
-term_buf_destroy(term_buf* buf)
+void term_buf_destroy(term_buf* buf)
 {
     // Walk list of slabs and free each one
     slab* s = buf->slabs;
@@ -108,8 +104,7 @@ term_buf_destroy(term_buf* buf)
 }
 
 
-int
-term_buf_add2(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2)
+int term_buf_add2(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2)
 {
     GROW_BUF(buf, 2);
     buf->terms[buf->terms_used++] = d1;
@@ -117,8 +112,7 @@ term_buf_add2(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2)
     return OK;
 }
 
-int
-term_buf_add3(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2, ErlDrvTermData d3)
+int term_buf_add3(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2, ErlDrvTermData d3)
 {
     GROW_BUF(buf, 3);
     buf->terms[buf->terms_used++] = d1;
@@ -127,16 +121,14 @@ term_buf_add3(term_buf* buf, ErlDrvTermData d1, ErlDrvTermData d2, ErlDrvTermDat
     return OK;
 }
 
-int
-term_buf_double(term_buf* buf, double value)
+int term_buf_double(term_buf* buf, double value)
 {
     double* ptr = (double*)term_buf_slab_alloc(buf, sizeof(double));
     *ptr = value;
     return term_buf_add2(buf, ERL_DRV_FLOAT, (ErlDrvTermData)ptr);
 }
 
-int
-term_buf_binary(term_buf* buf, const unsigned char* data, int len)
+int term_buf_binary(term_buf* buf, const unsigned char* data, int len)
 {
     char* data_copy = (char*)term_buf_slab_alloc(buf, len);
     memcpy(data_copy, data, len);
