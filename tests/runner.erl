@@ -27,17 +27,26 @@ timed(Prefix, Name, Func) ->
     End = micro(),
     display(Prefix, Name, Start, End, Result).
 
+
+decode_ok(_R) -> %% Just return ok if got any value, any error to argument will be caught below
+    true.
+    
 single(Cases, Encode, Decode) ->
     lists:foldl(fun({_Case, Json, Term}, {AccDec, AccRound}) ->
         case Term of
         nil ->
-            Decode(Json),
-            {0, 0};
+            case (catch decode_ok(Decode(Json))) of
+                true ->
+                    {AccDec, AccRound};
+                _ ->
+                    {AccDec+1, AccRound}
+            end;
         _ ->
             AccDec2 = case (catch compare:equiv(Term, Decode(Json))) of
             true ->
                 AccDec;
-            _ ->
+            Other ->
+                io:format("Decoding error: I:~p E:~p A:~p\n", [Json, Term, Decode(Json)]),
                 AccDec+1
             end,
             AccRound2 = case (catch compare:equiv(Term, Decode(Encode(Term)))) of

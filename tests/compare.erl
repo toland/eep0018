@@ -22,6 +22,19 @@ equiv(true, true) -> true;
 equiv(false, false) -> true;
 equiv(null, null) -> true.
 
+%% Convert any keys with lists or atoms to binaries before comparison
+equiv_key(K1, K2) when is_atom(K1) ->
+    equiv_key(list_to_binary(atom_to_list(K1)), K2);
+equiv_key(K1, K2) when is_list(K1) ->
+    equiv_key(list_to_binary(K1), K2);
+equiv_key(K1, K2) when is_atom(K2) ->
+    equiv_key(K1, list_to_binary(atom_to_list(K2)));
+equiv_key(K1, K2) when is_list(K2) ->
+    equiv_key(K1, list_to_binary(K2));
+equiv_key(K1, K2) ->
+    equiv(K1, K2).
+
+
 %% Object representation and traversal order is unknown.
 %% Use the sledgehammer and sort property lists.
 
@@ -30,7 +43,7 @@ equiv_object(Props1, Props2) ->
     L2 = lists:keysort(1, Props2),
     Pairs = lists:zip(L1, L2),
     true = lists:all(fun({{K1, V1}, {K2, V2}}) ->
-                             equiv(K1, K2) and equiv(V1, V2)
+                             equiv_key(K1, K2) and equiv(V1, V2)
                      end, Pairs).
 
 %% Recursively compare tuple elements for equivalence.

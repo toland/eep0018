@@ -7,37 +7,36 @@
 
 #include "eep0018.h"
 
-static ErlDrvData
-eep0018_start(ErlDrvPort port, char *buff)
+static ErlDrvData eep0018_start(ErlDrvPort port, char *buff)
 {
-    if(port == NULL) return ERL_DRV_ERROR_GENERAL;
     set_port_control_flags(port, PORT_CONTROL_FLAG_BINARY);
     return (ErlDrvData) port;
 }
 
-static int
-eep0018_control(
-        ErlDrvData drv_data,
-        unsigned int command,
-        char* buf,
-        int len,
-        char **rbuf,
-        int rlen)
+static int eep0018_control(ErlDrvData drv_data,
+                           unsigned int command,
+                           char* buf,
+                           int len,
+                           char **rbuf,
+                           int rlen)
 {
+    ErlDrvPort port = (ErlDrvPort)drv_data;
+    
     switch(command)
     {
         case 0:
-            return term_to_json(buf, len, rbuf, rlen);
+            term_to_json(port, buf, len);
+            break;
         case 1:
-            *rbuf = 0;
-            return json_to_term((ErlDrvPort) drv_data, buf, len);
-        default:
-            return -1;
+            json_to_term(port, buf, len);
+            break;
     }
+
+    *rbuf = 0;
+    return 0;
 }
 
-static ErlDrvEntry
-eep0018_driver_entry =
+static ErlDrvEntry eep0018_driver_entry =
 {
     NULL,               /* Init */
     eep0018_start,
