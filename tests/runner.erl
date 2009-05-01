@@ -45,7 +45,8 @@ single(Cases, Encode, Decode) ->
             AccDec2 = case (catch compare:equiv(Term, Decode(Json))) of
             true ->
                 AccDec;
-            _ ->
+            Other ->
+                io:format("Decoding error: I:~p E:~p A:~p\n", [Json, Term, Decode(Json)]),
                 AccDec+1
             end,
             AccRound2 = case (catch compare:equiv(Term, Decode(Encode(Term)))) of
