@@ -78,6 +78,7 @@ void flush_data(gen_ctx* ctx, int refill)
     int count = ctx->bin->orig_size - ctx->buffer_avail;
     DBG("flush_data: refill %d count %d\n", refill, count);
     driver_output_binary(ctx->port, 0, 0, ctx->bin, 0, count);
+    driver_free_binary(ctx->bin);
     if (refill)
     {
         ctx->bin    = driver_alloc_binary(DEFAULT_BUFFER_SIZE);
