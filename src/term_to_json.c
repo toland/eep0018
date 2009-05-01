@@ -50,12 +50,12 @@ typedef union
     long long llval;  
 } number_union;
 
-#define INSERT_SEP  {                                           \
-        gen_state state = ctx->state_stack[ctx->depth];          \
+#define INSERT_SEP  {                                             \
+        gen_state state = ctx->state_stack[ctx->depth];           \
         if (state == gen_map_key || state == gen_in_array)        \
-            append_data(ctx, ",", 1);                           \
-        else if (state == gen_map_val)                           \
-            append_data(ctx, ":", 1);                           \
+            append_data(ctx, ",", 1);                             \
+        else if (state == gen_map_val)                            \
+            append_data(ctx, ":", 1);                             \
     }
 
 #define ENSURE_NOT_KEY {                                        \
@@ -275,7 +275,7 @@ int estring_to_json(gen_ctx* ctx, int size, char* buf, int* index)
     // As with ei_decode_binary, ei_decode_string requires a target buffer to copy the
     // string into. Again, we read the erl_interface source to find that in this situation
     // the first 3 bytes are header info, so we'll skip that.
-    const unsigned char* data = buf + (*index) + 3;
+    const unsigned char* data = (unsigned char*)buf + (*index) + 3;
 
     // Open the array
     append_data(ctx, "[", 1);
