@@ -21,5 +21,6 @@
 
 void term_to_json(ErlDrvPort port, char* buf, int len);
 int json_to_term(ErlDrvPort port, char* buf, int len);
+void reformat(ErlDrvPort port, char* buf, int len);
 
 #endif

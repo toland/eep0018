@@ -21,7 +21,7 @@ static int eep0018_control(ErlDrvData drv_data,
                            int rlen)
 {
     ErlDrvPort port = (ErlDrvPort)drv_data;
-    
+
     switch(command)
     {
         case 0:
@@ -29,6 +29,9 @@ static int eep0018_control(ErlDrvData drv_data,
             break;
         case 1:
             json_to_term(port, buf, len);
+            break;
+        case 2:
+            reformat(port, buf, len);
             break;
     }
 
