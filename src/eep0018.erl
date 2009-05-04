@@ -7,7 +7,7 @@
 -module(eep0018).
 
 %% Public API
--export([json_to_term/1, term_to_json/1]).
+-export([json_to_term/1, term_to_json/1, reformat/1]).
 
 %% Export gen_server that's used for process to ensure the
 %% driver code doesn't get unloaded. Hack? I think so.
@@ -35,6 +35,17 @@ json_to_term(Json) when is_binary(Json) ->
         {json_ok, Term} ->
             Term;
         {json_error, Reason} ->
+            throw({json_error, Reason})
+    end.
+
+reformat(Json) when is_list(Json) ->
+    reformat(list_to_binary(Json));
+reformat(Json) when is_binary(Json) ->
+    [] = erlang:port_control(drv_port(), 2, <<Json/binary, 0:8>>),
+    receive
+        {ok, Formatted} ->
+            Formatted;
+        {error, Reason} ->
             throw({json_error, Reason})
     end.
 

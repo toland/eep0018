@@ -23,6 +23,7 @@ OBJECTS = \
 	json_to_term.o \
 	term_buf.o \
 	term_to_json.o \
+	json_formatter.o \
 	../yajl/src/yajl.o \
 	../yajl/src/yajl_alloc.o \
 	../yajl/src/yajl_buf.o \
