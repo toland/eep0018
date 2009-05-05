@@ -57,7 +57,17 @@ reformat(Json) when is_binary(Json) ->
 drv_port() ->
     case get(eep0018_drv_port) of
         undefined ->
+            %% Start up the eep0018_server if it's not already running. This process
+            %% ensures that there is always at least one reference to the .so/driver library.
+            %% This avoids "flapping" when lots of port instances come and go.
             ensure_started(),
+            
+            %% Make sure this process loads the driver -- this increments the refcount
+            %% on the driver. 
+            case erl_ddll:load_driver(code:priv_dir(eep0018), eep0018_drv) of
+                ok -> ok;
+                {error, permanent} -> ok
+            end,
             Port = open_port({spawn, eep0018_drv}, [binary]),
             erlang:put(eep0018_drv_port, Port),
             Port;
