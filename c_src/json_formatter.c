@@ -38,7 +38,7 @@
 #include <string.h>
 
 #include "eep0018.h"
-#include "yajl_gen.h"
+#include "yajl/yajl_gen.h"
 
 static int reformat_null(void * ctx)
 {

@@ -14,7 +14,7 @@
 #include <erl_driver.h>
 #include <ei.h>
 
-#include "yajl_parse.h"
+#include "yajl/yajl_parse.h"
 
 #define ERROR 1
 #define OK    0
