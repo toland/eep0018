@@ -16,3 +16,8 @@ CLOBBER.include LINK
 
 file DRV_DIR => LINK
 file DRIVER => YAJL_OBJS
+
+task 'erlbox:prepare' do
+  FileUtils.rm_rf "yajl" if File.exists?("yajl")
+  sh "git submodule update --init"
+end
